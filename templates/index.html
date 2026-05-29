@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Taste Rater — AI Restaurant Review Analyser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Variables ─────────────────────────────────────────────────────── */
+    :root {
+      --burgundy:  #6B1E30;
+      --burgundy2: #8C2A3E;
+      --gold:      #C9973A;
+      --gold-lt:   #E8C078;
+      --cream:     #FDF6EC;
+      --cream2:    #F7ECD8;
+      --dark:      #1C1108;
+      --mid:       #5A4030;
+      --light:     #9E826A;
+      --white:     #FFFFFF;
+      --shadow:    0 4px 32px rgba(107,30,48,0.10);
+      --shadow-lg: 0 12px 48px rgba(107,30,48,0.18);
+    }
+
+    /* ── Reset ─────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Base ──────────────────────────────────────────────────────────── */
+    body {
+      font-family: 'Lato', sans-serif;
+      background-color: var(--cream);
+      color: var(--dark);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-image:
+        radial-gradient(circle at 15% 20%, rgba(201,151,58,0.07) 0%, transparent 50%),
+        radial-gradient(circle at 85% 80%, rgba(107,30,48,0.08) 0%, transparent 50%);
+    }
+
+    /* ── Header ────────────────────────────────────────────────────────── */
+    header {
+      background: var(--burgundy);
+      color: var(--cream);
+      text-align: center;
+      padding: 3rem 1.5rem 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 30% 50%, rgba(201,151,58,0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 70% 50%, rgba(0,0,0,0.2) 0%, transparent 60%);
+    }
+    .header-inner { position: relative; z-index: 1; }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.6rem;
+    }
+    .brand-icon {
+      font-size: 2.2rem;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+    }
+    .brand-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--gold-lt);
+    }
+    .tagline {
+      font-size: 0.95rem;
+      font-weight: 300;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(253,246,236,0.65);
+    }
+
+    /* ── Main ──────────────────────────────────────────────────────────── */
+    main {
+      flex: 1;
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.8rem;
+    }
+
+    /* ── Cards ─────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--white);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 2rem;
+      animation: fadeUp 0.5s ease both;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--burgundy);
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .card-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, var(--cream2), transparent);
+      margin-left: 0.5rem;
+    }
+
+    /* ── Input area ─────────────────────────────────────────────────────── */
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      resize: vertical;
+      border: 2px solid var(--cream2);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+      font-family: 'Lato', sans-serif;
+      font-size: 0.97rem;
+      line-height: 1.65;
+      color: var(--dark);
+      background: var(--cream);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+    textarea::placeholder { color: var(--light); }
+    textarea:focus {
+      border-color: var(--burgundy2);
+      box-shadow: 0 0 0 4px rgba(107,30,48,0.08);
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.6rem;
+    }
+    .char-count { font-size: 0.8rem; color: var(--light); }
+    .char-count.warn { color: var(--gold); }
+
+    /* ── Button ─────────────────────────────────────────────────────────── */
+    .btn-predict {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--burgundy);
+      color: var(--cream);
+      border: none;
+      border-radius: 8px;
+      padding: 0.65rem 1.6rem;
+      font-family: 'Lato', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 3px 12px rgba(107,30,48,0.25);
+    }
+    .btn-predict:hover:not(:disabled) {
+      background: var(--burgundy2);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(107,30,48,0.3);
+    }
+    .btn-predict:active:not(:disabled) { transform: translateY(0); }
+    .btn-predict:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    /* ── Loading ─────────────────────────────────────────────────────────── */
+    .loading-card {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      padding: 2.5rem;
+    }
+    .loading-card.visible { display: flex; }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 3px solid var(--cream2);
+      border-top-color: var(--burgundy);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      color: var(--mid);
+      font-size: 0.95rem;
+    }
+
+    /* ── Error ───────────────────────────────────────────────────────────── */
+    .error-card {
+      display: none;
+      background: #FFF5F6;
+      border: 1.5px solid #F5C6CB;
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      color: #8B2030;
+      font-size: 0.9rem;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .error-card.visible { display: flex; }
+
+    /* ── Results ─────────────────────────────────────────────────────────── */
+    .results-card { display: none; animation: fadeUp 0.4s ease; }
+    .results-card.visible { display: block; }
+
+    /* Big star rating display */
+    .rating-hero {
+      text-align: center;
+      padding: 1.6rem 0 1.2rem;
+      border-bottom: 1px solid var(--cream2);
+      margin-bottom: 1.6rem;
+    }
+    .stars-display {
+      font-size: 2.6rem;
+      line-height: 1;
+      margin-bottom: 0.6rem;
+      letter-spacing: 0.04em;
+    }
+    .rating-label {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--burgundy);
+      margin-bottom: 0.3rem;
+    }
+    .rating-sub {
+      font-size: 0.85rem;
+      color: var(--light);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* Confidence bars */
+    .confidence-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--light);
+      margin-bottom: 0.9rem;
+    }
+    .bar-row {
+      display: grid;
+      grid-template-columns: 60px 1fr 46px;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.55rem;
+    }
+    .bar-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--mid);
+      text-align: right;
+    }
+    .bar-track {
+      height: 9px;
+      background: var(--cream2);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      width: 0;
+      transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .bar-pct {
+      font-size: 0.8rem;
+      color: var(--mid);
+      font-weight: 700;
+      text-align: right;
+    }
+
+    /* Bar colors by star */
+    .bar-1 { background: #C0392B; }
+    .bar-2 { background: #E07B39; }
+    .bar-3 { background: #D4AC0D; }
+    .bar-4 { background: #27AE60; }
+    .bar-5 { background: #1E8449; }
+
+    /* Highlight the winning bar */
+    .bar-row.winner .bar-label { color: var(--burgundy); }
+    .bar-row.winner .bar-pct   { color: var(--burgundy); }
+    .bar-row.winner .bar-track { background: var(--cream2); }
+
+    /* ── Sample reviews ──────────────────────────────────────────────────── */
+    .examples-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .example-chip {
+      background: var(--cream2);
+      border: 1.5px solid rgba(107,30,48,0.12);
+      border-radius: 20px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      color: var(--mid);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .example-chip:hover {
+      background: var(--burgundy);
+      border-color: var(--burgundy);
+      color: var(--cream);
+    }
+
+    /* ── Footer ─────────────────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.78rem;
+      color: var(--light);
+      border-top: 1px solid var(--cream2);
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Responsive ──────────────────────────────────────────────────────── */
+    @media (max-width: 480px) {
+      header { padding: 2rem 1rem 1.8rem; }
+      .brand-name { font-size: 1.9rem; }
+      main { padding: 1.5rem 1rem 3rem; }
+      .card { padding: 1.5rem; }
+      .stars-display { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-icon">🍽️</span>
+        <span class="brand-name">Taste Rater</span>
+      </div>
+      <p class="tagline">AI-Powered Restaurant Review Analyser</p>
+    </div>
+  </header>
+
+  <!-- ── Main ───────────────────────────────────────────────────────────── -->
+  <main>
+
+    <!-- Input card -->
+    <div class="card" style="animation-delay:0.05s">
+      <div class="card-title">✍️ Write Your Review</div>
+      <textarea id="review-input"
+        placeholder="Describe your dining experience… e.g. 'The pasta was perfectly al dente, staff incredibly attentive, but the wait was long.'"
+        maxlength="2000"></textarea>
+      <div class="meta-row">
+        <span class="char-count" id="char-count">0 / 2000</span>
+        <button class="btn-predict" id="predict-btn">
+          <span>✨</span> Analyse Review
+        </button>
+      </div>
+    </div>
+
+    <!-- Example chips -->
+    <div class="card" style="animation-delay:0.1s; padding: 1.4rem 2rem;">
+      <div class="card-title">💡 Try an example</div>
+      <div class="examples-row" id="examples-row"></div>
+    </div>
+
+    <!-- Loading -->
+    <div class="card loading-card" id="loading-card">
+      <div class="spinner"></div>
+      <p class="loading-text">Tasting your review…</p>
+    </div>
+
+    <!-- Error -->
+    <div class="error-card" id="error-card">
+      <span>⚠️</span>
+      <span id="error-text"></span>
+    </div>
+
+    <!-- Results -->
+    <div class="card results-card" id="results-card" style="animation-delay:0s">
+      <div class="card-title">📊 Prediction Results</div>
+
+      <div class="rating-hero">
+        <div class="stars-display" id="stars-display">⭐⭐⭐⭐⭐</div>
+        <div class="rating-label" id="rating-label">5 Stars</div>
+        <div class="rating-sub" id="rating-sub">Excellent</div>
+      </div>
+
+      <p class="confidence-title">Confidence Breakdown</p>
+      <div id="confidence-bars"></div>
+    </div>
+
+  </main>
+
+  <!-- ── Footer ─────────────────────────────────────────────────────────── -->
+  <footer>Powered by LSTM + TensorFlow &nbsp;·&nbsp; Taste Rater v1.0</footer>
+
+  <!-- ── Script ─────────────────────────────────────────────────────────── -->
+  <script>
+    // ── Example reviews ────────────────────────────────────────────────────
+    const EXAMPLES = [
+      { label: '😍 Amazing!',  text: 'Absolutely the best dining experience I have ever had. Every dish was a masterpiece and the staff made us feel like royalty. Will be back very soon!' },
+      { label: '😊 Pretty good', text: 'Solid food and friendly staff. The pasta was tasty but a bit overpriced for the portion size. Nice ambiance though, would come back for a special occasion.' },
+      { label: '😐 Average',   text: 'Food was okay, nothing special. Took 45 minutes for our mains to arrive on a quiet evening. The dessert was the highlight but overall a forgettable meal.' },
+      { label: '😠 Terrible',  text: 'Worst restaurant experience ever. Food arrived cold and tasted stale. The waiter was rude and ignored us for 20 minutes. Total waste of money, avoid.' },
+    ];
+
+    const examplesRow = document.getElementById('examples-row');
+    EXAMPLES.forEach(({ label, text }) => {
+      const chip = document.createElement('button');
+      chip.className = 'example-chip';
+      chip.textContent = label;
+      chip.addEventListener('click', () => {
+        document.getElementById('review-input').value = text;
+        updateCharCount();
+        hideResults();
+      });
+      examplesRow.appendChild(chip);
+    });
+
+    // ── Char counter ───────────────────────────────────────────────────────
+    const reviewInput = document.getElementById('review-input');
+    const charCountEl = document.getElementById('char-count');
+    function updateCharCount() {
+      const len = reviewInput.value.length;
+      charCountEl.textContent = `${len} / 2000`;
+      charCountEl.classList.toggle('warn', len > 1800);
+    }
+    reviewInput.addEventListener('input', updateCharCount);
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+    function setLoading(on) {
+      document.getElementById('loading-card').classList.toggle('visible', on);
+      document.getElementById('predict-btn').disabled = on;
+    }
+    function showError(msg) {
+      const el = document.getElementById('error-card');
+      document.getElementById('error-text').textContent = msg;
+      el.classList.add('visible');
+    }
+    function hideResults() {
+      document.getElementById('results-card').classList.remove('visible');
+      document.getElementById('error-card').classList.remove('visible');
+    }
+
+    const LABELS = ['Terrible', 'Poor', 'Average', 'Good', 'Excellent'];
+    const STAR_EMOJI = ['⭐', '⭐⭐', '⭐⭐⭐', '⭐⭐⭐⭐', '⭐⭐⭐⭐⭐'];
+
+    function showResults(rating, confidence) {
+      const idx = rating - 1;
+      document.getElementById('stars-display').textContent = STAR_EMOJI[idx];
+      document.getElementById('rating-label').textContent  = `${rating} Star${rating > 1 ? 's' : ''}`;
+      document.getElementById('rating-sub').textContent    = LABELS[idx];
+
+      const barsEl = document.getElementById('confidence-bars');
+      barsEl.innerHTML = '';
+      confidence.forEach((pct, i) => {
+        const isWinner = (i + 1) === rating;
+        const row = document.createElement('div');
+        row.className = `bar-row${isWinner ? ' winner' : ''}`;
+        row.innerHTML = `
+          <div class="bar-label">${i + 1} ★</div>
+          <div class="bar-track">
+            <div class="bar-fill bar-${i+1}" id="bar-fill-${i}" style="width:0%"></div>
+          </div>
+          <div class="bar-pct">${pct}%</div>
+        `;
+        barsEl.appendChild(row);
+      });
+      document.getElementById('results-card').classList.add('visible');
+      // Animate bars after DOM paint
+      requestAnimationFrame(() => {
+        confidence.forEach((pct, i) => {
+          const fill = document.getElementById(`bar-fill-${i}`);
+          if (fill) fill.style.width = `${pct}%`;
+        });
+      });
+    }
+
+    // ── Predict ────────────────────────────────────────────────────────────
+    document.getElementById('predict-btn').addEventListener('click', async () => {
+      const review = reviewInput.value.trim();
+      hideResults();
+      if (!review) { showError('Please write a review first.'); return; }
+      if (review.length < 10) { showError('Review is too short — add a bit more detail!'); return; }
+
+      setLoading(true);
+      try {
+        const res  = await fetch('/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ review }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showError(data.error || 'Something went wrong.'); return; }
+        showResults(data.rating, data.confidence);
+      } catch (err) {
+        showError('Could not reach the server. Is Flask running?');
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    // Allow Ctrl+Enter to submit
+    reviewInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        document.getElementById('predict-btn').click();
+      }
+    });
+  </script>
+
+</body>
+</html>
